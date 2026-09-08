@@ -182,6 +182,25 @@
   .iconbtn:active{filter:brightness(.94);}
   .empty-hint{text-align:center; padding:26px 14px; color:var(--ink-soft); font-size:13.5px;}
 
+  /* ---------- foto de fórmula médica ---------- */
+  .btn.ghost.photobtn{display:flex; align-items:center; justify-content:center; gap:8px;}
+  .lockedfield{background:var(--surface-2); border:1.5px dashed var(--line); border-radius:12px;
+    padding:9px 12px; font-size:14.5px; color:var(--ink); opacity:.85;}
+  .lockedfield.small{font-size:13px; color:var(--ink-soft);}
+  .lockedhint{display:flex; align-items:flex-start; gap:8px; background:var(--moss); color:var(--jungle);
+    border-radius:12px; padding:10px 12px; font-size:12.5px; line-height:1.4; margin:0 0 4px;}
+  @media (prefers-color-scheme: dark){ .lockedhint{color:var(--leaf-soft);} }
+  .ocrOverlay{position:fixed; inset:0; z-index:70; background:rgba(15,25,20,.55);
+    display:flex; align-items:center; justify-content:center; padding:20px;}
+  .ocrCard{background:var(--surface); border-radius:20px; padding:26px 22px; max-width:340px;
+    width:100%; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.3);}
+  .spinner{width:34px; height:34px; margin:0 auto 14px; border-radius:999px;
+    border:3.5px solid var(--moss); border-top-color:var(--leaf); animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ocrCard h3{font-family:var(--serif); font-size:17px; margin:0 0 6px;}
+  .ocrCard p{font-size:13px; color:var(--ink-soft); margin:0;}
+  .ocrCard .prog{font-size:12px; color:var(--ink-faint); margin-top:10px;}
+
   /* tab bar (móvil) */
   nav.tabbar{position:fixed; left:0; right:0; bottom:0; z-index:20;
     max-width:480px; margin:0 auto; height:var(--tabh);
@@ -660,7 +679,7 @@ function medCard(m,now){
   var h='<div class="card medcard"><div class="rowbtns">'+
     '<button class="iconbtn" data-editmed="'+m.id+'" aria-label="Editar">✏️</button>'+
     '<button class="iconbtn" data-delmed="'+m.id+'" aria-label="Borrar">🗑️</button></div>'+
-    '<h2 style="padding-right:76px">'+esc(m.name)+'</h2>';
+    '<h2 style="padding-right:76px">'+esc(m.name)+(m.fromPhoto?' <span class="chip" title="Datos tomados de tu fórmula médica">🔒 fórmula</span>':'')+'</h2>';
   if(m.dose||m.note) h+='<p class="lead">'+esc(m.dose)+(m.dose&&m.note?' · ':'')+esc(m.note)+'</p>';
   h+='<span class="status '+cls+'">'+label+'</span>';
 
@@ -706,7 +725,9 @@ function renderTratamiento(){
   var meds=activeMeds(), supps=activeSupps();
   var h='<h1 class="view">Tratamiento</h1><p class="view-sub">Tu avance en cada medicamento.</p>';
 
-  h+='<button class="btn" data-openform="med" style="margin-bottom:14px">+ Agregar medicamento</button>';
+  h+='<button class="btn" data-openform="med" style="margin-bottom:10px">+ Agregar medicamento</button>';
+  h+='<button class="btn ghost photobtn" data-openphoto="1" style="margin-bottom:14px">📷 Agregar por foto de fórmula</button>';
+  h+='<input type="file" id="photoFile" accept="image/*" capture="environment" style="display:none">';
 
   if(!meds.length){
     h+='<div class="card"><p class="empty-hint">Aún no tienes medicamentos con horario. Toca «+ Agregar medicamento» para crear el primero: nombre, dosis, cada cuánto se toma y cuándo empieza.</p></div>';
@@ -877,28 +898,35 @@ function formOverlayHTML(){
   }
 
   // kind === 'med'
-  var m=editing||{name:'',dose:'',note:'',stepHours:24,startMode:'fixed',fixedStart:'',eventDate:null,startTime:'08:00',afterId:'',endMode:'count',totalDoses:'',cycleLength:28};
+  var blank={name:'',dose:'',note:'',stepHours:24,startMode:'fixed',fixedStart:'',eventDate:null,startTime:'08:00',afterId:'',endMode:'count',totalDoses:'',cycleLength:28};
+  var m=editing||(formState.prefill?Object.assign({},blank,formState.prefill):blank);
   var freq=freqFromStep(m.stepHours);
   var otherMeds=state.meds.filter(function(x){ return x.kind==='med' && x.id!==m.id; });
+  var locked=!!(editing && editing.fromPhoto);
+  var lockAttr=locked?' disabled':'';
 
   var h='<div class="overlay" id="formOverlay"><div class="sheet"><div class="sheetHead">'+
     '<h2 style="margin:0">'+(editing?'Editar medicamento':'Nuevo medicamento')+'</h2>'+
     '<button class="iconbtn" data-closeform="1" aria-label="Cerrar">✕</button></div>'+
     '<div class="formgrid">';
 
-  h+='<div><label>Nombre</label><input type="text" id="f_name" value="'+esc(m.name)+'" placeholder="Ej. Rifaximina"></div>';
-  h+='<div class="row"><div><label>Dosis</label><input type="text" id="f_dose" value="'+esc(m.dose)+'" placeholder="Ej. 550 mg · 1 tableta"></div>'+
-     '<div><label>Nota</label><input type="text" id="f_note" value="'+esc(m.note)+'" placeholder="Ej. Vía oral"></div></div>';
+  if(locked){
+    h+='<p class="lockedhint">🔒 Este medicamento viene de tu fórmula médica. Por seguridad, solo puedes cambiar la hora de inicio y las fechas — si algo más está mal, bórralo y agrégalo de nuevo.</p>';
+  }
 
-  h+='<div><label>¿Cada cuánto se toma?</label><select id="f_freq">'+
+  h+='<div><label>Nombre</label><input type="text" id="f_name" value="'+esc(m.name)+'" placeholder="Ej. Rifaximina"'+lockAttr+'></div>';
+  h+='<div class="row"><div><label>Dosis</label><input type="text" id="f_dose" value="'+esc(m.dose)+'" placeholder="Ej. 550 mg · 1 tableta"'+lockAttr+'></div>'+
+     '<div><label>Nota</label><input type="text" id="f_note" value="'+esc(m.note)+'" placeholder="Ej. Vía oral"'+lockAttr+'></div></div>';
+
+  h+='<div><label>¿Cada cuánto se toma?</label><select id="f_freq"'+lockAttr+'>'+
      '<option value="daily"'+(freq==='daily'?' selected':'')+'>Todos los días</option>'+
      '<option value="weekly"'+(freq==='weekly'?' selected':'')+'>Una vez por semana</option>'+
      '<option value="interval"'+(freq==='interval'?' selected':'')+'>Cada cierto número de horas</option>'+
      '</select></div>';
   h+='<div id="f_hoursWrap" style="'+(freq==='interval'?'':'display:none')+'"><label>¿Cada cuántas horas?</label>'+
-     '<input type="number" id="f_hours" min="1" max="72" value="'+(freq==='interval'?m.stepHours:8)+'"></div>';
+     '<input type="number" id="f_hours" min="1" max="72" value="'+(freq==='interval'?m.stepHours:8)+'"'+lockAttr+'></div>';
 
-  h+='<div><label>¿Cuándo empieza?</label><select id="f_startmode">'+
+  h+='<div><label>¿Cuándo empieza?</label><select id="f_startmode"'+lockAttr+'>'+
      '<option value="fixed"'+(m.startMode==='fixed'?' selected':'')+'>En una fecha y hora exacta</option>'+
      '<option value="event"'+(m.startMode==='event'?' selected':'')+'>Cuando yo la marque (ej. tu período)</option>'+
      '<option value="after"'+(m.startMode==='after'?' selected':'')+(otherMeds.length?'':' disabled')+'>El día después de terminar otro medicamento</option>'+
@@ -910,12 +938,12 @@ function formOverlayHTML(){
   h+='<div id="f_timeWrap" style="'+(m.startMode!=='fixed'?'':'display:none')+'"><label>Hora del día</label>'+
      '<input type="time" id="f_starttime" value="'+(m.startTime||'08:00')+'"></div>';
 
-  h+='<div id="f_afterWrap" style="'+(m.startMode==='after'?'':'display:none')+'"><label>Después de terminar…</label><select id="f_afterid">';
+  h+='<div id="f_afterWrap" style="'+(m.startMode==='after'?'':'display:none')+'"><label>Después de terminar…</label><select id="f_afterid"'+lockAttr+'>';
   otherMeds.forEach(function(x){ h+='<option value="'+x.id+'"'+(m.afterId===x.id?' selected':'')+'>'+esc(x.name)+'</option>'; });
   if(!otherMeds.length) h+='<option value="">Agrega primero otro medicamento</option>';
   h+='</select></div>';
 
-  h+='<div id="f_endmodeWrap" style="'+(freq==='daily'?'':'display:none')+'"><label>Duración</label><select id="f_endmode">'+
+  h+='<div id="f_endmodeWrap" style="'+(freq==='daily'?'':'display:none')+'"><label>Duración</label><select id="f_endmode"'+lockAttr+'>'+
      '<option value="count"'+(m.endMode==='count'?' selected':'')+'>Número fijo de días</option>'+
      '<option value="indefinite"'+(m.endMode==='indefinite'?' selected':'')+'>Sin fecha de fin</option>'+
      '<option value="cycle"'+(m.endMode==='cycle'?' selected':'')+'>Sin fin, mostrar caja/ciclo (ej. 28 días)</option>'+
@@ -923,10 +951,10 @@ function formOverlayHTML(){
 
   h+='<div id="f_countWrap" style="'+((freq==='daily'?m.endMode:'count')==='count'?'':'display:none')+'"><label id="f_countLabel">'+
      (freq==='weekly'?'Número de semanas':freq==='interval'?'Número de tomas':'Número de días')+'</label>'+
-     '<input type="number" id="f_total" min="1" max="500" value="'+(m.totalDoses||'')+'"></div>';
+     '<input type="number" id="f_total" min="1" max="500" value="'+(m.totalDoses||'')+'"'+lockAttr+'></div>';
 
   h+='<div id="f_cycleWrap" style="'+(freq==='daily'&&m.endMode==='cycle'?'':'display:none')+'"><label>Duración del ciclo (días)</label>'+
-     '<input type="number" id="f_cycle" min="1" max="365" value="'+(m.cycleLength||28)+'"></div>';
+     '<input type="number" id="f_cycle" min="1" max="365" value="'+(m.cycleLength||28)+'"'+lockAttr+'></div>';
 
   h+='</div>'+
      '<div class="formactions" style="margin-top:14px"><button class="btn ghost" data-closeform="1">Cancelar</button>'+
@@ -935,8 +963,8 @@ function formOverlayHTML(){
   return h;
 }
 
-function openForm(kind,editId){
-  formState={kind:kind,editId:editId||null};
+function openForm(kind,editId,prefill){
+  formState={kind:kind,editId:editId||null,prefill:prefill||null,fromPhoto:!!(prefill&&prefill.fromPhoto)};
   document.body.insertAdjacentHTML('beforeend',formOverlayHTML());
   wireFormEvents();
   syncFormVisibility();
@@ -944,6 +972,101 @@ function openForm(kind,editId){
 function closeForm(){
   var o=document.getElementById('formOverlay'); if(o) o.remove();
   formState=null;
+}
+
+/* ================= foto de fórmula médica (OCR en el navegador) ================= */
+var TESSERACT_CDN='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+var tesseractLoadPromise=null;
+function loadTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  if(tesseractLoadPromise) return tesseractLoadPromise;
+  tesseractLoadPromise=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src=TESSERACT_CDN;
+    s.onload=function(){ resolve(); };
+    s.onerror=function(){ tesseractLoadPromise=null; reject(new Error('no se pudo cargar el lector de texto')); };
+    document.head.appendChild(s);
+  });
+  return tesseractLoadPromise;
+}
+function showOcrOverlay(msg){
+  hideOcrOverlay();
+  var d=document.createElement('div');
+  d.className='ocrOverlay'; d.id='ocrOverlay';
+  d.innerHTML='<div class="ocrCard"><div class="spinner"></div><h3>Leyendo tu fórmula…</h3>'+
+    '<p>'+esc(msg||'Esto puede tardar unos segundos.')+'</p><p class="prog" id="ocrProg"></p></div>';
+  document.body.appendChild(d);
+}
+function updateOcrProgress(pct){
+  var p=document.getElementById('ocrProg'); if(p) p.textContent=(pct?'Procesando… '+pct+'%':'');
+}
+function hideOcrOverlay(){
+  var d=document.getElementById('ocrOverlay'); if(d) d.remove();
+}
+function openPhotoFlow(){
+  var fi=document.getElementById('photoFile'); if(fi) fi.click();
+}
+function parseFormulaText(text){
+  var out={name:'',dose:'',note:'',stepHours:24};
+  if(!text) return out;
+  var lines=text.split(/\r?\n/).map(function(l){return l.replace(/\s+/g,' ').trim();}).filter(Boolean);
+  var doseRe=/(\d+[.,]?\d*\s?(?:mg|mcg|g|ml|ui)\b)/i;
+  var freqRules=[
+    [/cada\s*4\s*h/i,4],[/cada\s*6\s*h/i,6],[/cada\s*8\s*h/i,8],[/cada\s*12\s*h/i,12],[/cada\s*24\s*h/i,24],
+    [/1\s*vez\s*(al|por)\s*d[ií]a/i,24],[/una\s*vez\s*(al|por)\s*d[ií]a/i,24],
+    [/2\s*veces\s*(al|por)\s*d[ií]a/i,12],[/dos\s*veces\s*(al|por)\s*d[ií]a/i,12],
+    [/3\s*veces\s*(al|por)\s*d[ií]a/i,8],[/tres\s*veces\s*(al|por)\s*d[ií]a/i,8],
+    [/diari[oa]/i,24],[/1\s*vez\s*(a la|por)\s*semana/i,168],[/semanal/i,168]
+  ];
+  var nameLine='',doseText='';
+  for(var i=0;i<lines.length;i++){
+    var l=lines[i];
+    var dm=l.match(doseRe);
+    if(dm){
+      doseText=dm[1];
+      var before=l.slice(0,dm.index).replace(/^[-•*.]\s*/,'').trim();
+      nameLine=before||(i>0?lines[i-1]:'');
+      break;
+    }
+  }
+  if(!nameLine){
+    for(var j=0;j<lines.length;j++){
+      var lj=lines[j];
+      if(lj.length>=3 && lj.length<=40 && !/^(rp|dr\.?|dra\.?|fecha|paciente|cc|c\.c\.?|firma|clínica|eps)\b/i.test(lj)){ nameLine=lj; break; }
+    }
+  }
+  out.name=(nameLine||'').replace(/[:：]+$/,'').trim();
+  out.dose=(doseText||'').replace(/\s+/g,' ').trim();
+  var fullText=lines.join(' ');
+  for(var k=0;k<freqRules.length;k++){
+    if(freqRules[k][0].test(fullText)){ out.stepHours=freqRules[k][1]; break; }
+  }
+  return out;
+}
+function handlePhotoFile(file){
+  showOcrOverlay('Cargando el lector de texto…');
+  loadTesseract().then(function(){
+    updateOcrProgress(0);
+    return window.Tesseract.recognize(file,'spa',{
+      logger:function(info){
+        if(info && info.status==='recognizing text' && typeof info.progress==='number'){
+          updateOcrProgress(Math.round(info.progress*100));
+        }
+      }
+    });
+  }).then(function(result){
+    hideOcrOverlay();
+    var text=(result && result.data && result.data.text)||'';
+    var guess=parseFormulaText(text);
+    guess.fromPhoto=true;
+    openForm('med',null,guess);
+    if(!guess.name && !guess.dose){
+      setTimeout(function(){ alert('No logré leer bien la foto. Revisa y completa los datos a mano antes de guardar.'); },200);
+    }
+  }).catch(function(err){
+    hideOcrOverlay();
+    alert('No se pudo leer la foto. Puedes agregar el medicamento a mano con «+ Agregar medicamento».');
+  });
 }
 /* A diferencia de un refresh completo, esto NO reconstruye el HTML del formulario:
    solo muestra/oculta los bloques según las opciones elegidas, para no perder lo
@@ -1041,7 +1164,8 @@ function saveMedFromForm(){
   }else{
     state.meds.push({id:uid(),kind:'med',name:name,dose:dose,note:note,archived:false,
       stepHours:stepHours,startMode:startMode,fixedStart:fixedStart,eventDate:startMode==='event'?null:null,
-      startTime:startTime,afterId:afterId,endMode:endMode,totalDoses:totalDoses,cycleLength:cycleLength});
+      startTime:startTime,afterId:afterId,endMode:endMode,totalDoses:totalDoses,cycleLength:cycleLength,
+      fromPhoto:!!(formState&&formState.fromPhoto)});
   }
   save(); closeForm(); render();
 }
@@ -1112,6 +1236,7 @@ document.body.addEventListener('click',function(e){
   if(t.closest('[data-savesupp]')){ saveSuppFromForm(); return; }
   if(t.closest('[data-savemed]')){ saveMedFromForm(); return; }
   if(t.closest('[data-importbtn]')){ var fi=document.getElementById('importFile'); if(fi) fi.click(); return; }
+  if(t.closest('[data-openphoto]')){ openPhotoFlow(); return; }
 
   var rst=t.closest('[data-reset]');
   if(rst){
@@ -1153,6 +1278,11 @@ document.body.addEventListener('change',function(e){
     };
     reader.readAsText(file);
   }
+  if(e.target.id==='photoFile'){
+    var pf=e.target.files&&e.target.files[0];
+    e.target.value='';
+    if(pf) handlePhotoFile(pf);
+  }
 });
 document.querySelector('.app').addEventListener('toggle',function(e){
   if(e.target.id==='suppBox'){ state.dismiss.suppOpen=e.target.open; save(); }
@@ -1162,7 +1292,8 @@ window.__raiz={
   dosesForDate:dosesForDate, nextDose:nextDose, medStatus:medStatus, rangeOf:rangeOf,
   buildICS:buildICS, getState:function(){return state;}, setState:function(s){state=s; save();},
   addMed:function(m){ m.id=m.id||uid(); state.meds.push(m); save(); },
-  render:render
+  render:render, parseFormulaText:parseFormulaText, openForm:openForm, closeForm:closeForm,
+  handlePhotoFile:handlePhotoFile
 };
 
 var TABS=['hoy','tratamiento','alimentacion','ajustes'];
