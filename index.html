@@ -11,8 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Raíz">
 <meta name="theme-color" content="#0F3D2E">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
 <style>
   :root{
     --bg:#F4F6F1; --surface:#FFFFFF; --surface-2:#FBFCF9;
@@ -209,6 +209,22 @@
   }
 
   /* ---------- escritorio / pantallas anchas ---------- */
+  /* ---------- login local (nombre + PIN) ---------- */
+  .lockscreen{position:fixed; inset:0; z-index:200; background:var(--bg); display:flex;
+    align-items:center; justify-content:center; padding:20px;}
+  .lockwrap{max-width:300px; width:100%; text-align:center; display:flex; flex-direction:column; align-items:center;}
+  .lockwrap .brandbig{font-family:var(--serif); font-size:21px; font-weight:600; margin-top:2px;}
+  .lockback{position:fixed; left:16px; top:calc(16px + env(safe-area-inset-top)); z-index:201;}
+  .pinpad{display:flex; justify-content:center; gap:14px; margin:16px 0 4px;}
+  .pinpad .dot{width:15px; height:15px; border-radius:50%; border:2px solid var(--line); background:transparent; display:inline-block;}
+  .pinpad .dot.filled{background:var(--leaf); border-color:var(--leaf);}
+  .pinerr{color:var(--achiote); font-size:12.5px; min-height:16px; margin:2px 0 10px;}
+  .keypad{display:grid; grid-template-columns:repeat(3,64px); gap:12px; justify-content:center; margin-top:6px;}
+  .keypad button{padding:0; height:64px; border-radius:50%; border:1.5px solid var(--line); background:var(--surface-2);
+    font-size:21px; font-weight:650; color:var(--ink); cursor:pointer;}
+  .keypad button:active{filter:brightness(.94);}
+  .keypad span{height:64px;}
+
   @media (min-width:760px){
     body{padding-top:0; display:flex; justify-content:center; background:
       radial-gradient(1200px 800px at 50% -10%, var(--moss), var(--bg) 60%);
@@ -234,8 +250,8 @@
 <body>
 <div class="app">
   <header>
-    <img src="icon-192.png" alt="">
-    <div class="brand">Raíz<small>Mi tratamiento</small></div>
+    <img src="icons/icon-192.png" alt="">
+    <div class="brand">Raíz<small id="greetName">Mi tratamiento</small></div>
   </header>
 
   <section id="tab-hoy" class="screen active"></section>
@@ -265,7 +281,7 @@ var DAYS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 /* ================= estado / almacenamiento ================= */
 var persistWorks=true;
 function baseState(){
-  return {v:2, meds:[], taken:{}, redMeat:null, dismiss:{}};
+  return {v:2, meds:[], taken:{}, redMeat:null, dismiss:{}, profile:null};
 }
 function load(){
   var base=baseState();
@@ -282,6 +298,141 @@ function load(){
 }
 var state=load();
 function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){ persistWorks=false; } }
+
+/* ================= perfil / PIN (login local, sin servidor) ================= */
+var SESSION_KEY='raiz_unlocked';
+function isUnlocked(){ try{ return sessionStorage.getItem(SESSION_KEY)==='1'; }catch(e){ return true; } }
+function setUnlocked(){ try{ sessionStorage.setItem(SESSION_KEY,'1'); }catch(e){} }
+function needsLock(){ return !state.profile || !isUnlocked(); }
+function sha256hex(str){
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)).then(function(buf){
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  });
+}
+
+var lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''};
+
+function pinScreenHTML(title,sub,showBack,showForgot){
+  var cur=lock.entry||'';
+  var dots=''; for(var i=0;i<4;i++){ dots+='<span class="dot'+(i<cur.length?' filled':'')+'"></span>'; }
+  var keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  var kp='<div class="keypad">';
+  keys.forEach(function(k){
+    if(k===''){ kp+='<span></span>'; }else{ kp+='<button type="button" data-pk="'+(k==='⌫'?'del':k)+'">'+k+'</button>'; }
+  });
+  kp+='</div>';
+  var back=showBack?'<button class="iconbtn lockback" id="lk_cancelchange" aria-label="Cancelar">✕</button>':'';
+  var forgot=showForgot?'<button class="btn ghost small" id="lk_forgot" style="margin-top:24px">¿Olvidaste tu PIN?</button>':'';
+  return back+'<div class="lockwrap">'+
+    '<div class="brandbig">'+title+'</div>'+
+    '<p class="small" style="margin:4px 0 2px;max-width:280px">'+sub+'</p>'+
+    '<div class="pinpad">'+dots+'</div>'+
+    '<p class="pinerr">'+esc(lock.err||'')+'</p>'+
+    kp+forgot+'</div>';
+}
+function lockHTML(){
+  if(!state.profile && !lock.step) lock.step='onboard-name';
+  if(!state.profile && lock.step==='onboard-name'){
+    return '<div class="lockwrap">'+
+      '<img src="icons/icon-192.png" alt="" style="width:56px;height:56px;border-radius:14px;margin-bottom:12px">'+
+      '<div class="brandbig">Bienvenida a Raíz</div>'+
+      '<p class="small" style="margin:6px 0 20px;max-width:280px">Antes de empezar, dinos tu nombre. Se guarda solo en este dispositivo.</p>'+
+      '<div style="width:100%;max-width:280px">'+
+      '<input type="text" id="lk_name" placeholder="Tu nombre" style="text-align:center;font-size:17px" value="'+esc(lock.name)+'">'+
+      '<button class="btn" id="lk_nameNext" style="margin-top:14px">Continuar</button>'+
+      '</div></div>';
+  }
+  if(lock.step==='onboard-pin1') return pinScreenHTML('Crea un PIN de 4 dígitos','Lo usarás para entrar a la app.',false,false);
+  if(lock.step==='onboard-pin2') return pinScreenHTML('Confírmalo','Escribe el mismo PIN otra vez.',false,false);
+  if(lock.step==='changepin-old') return pinScreenHTML('Tu PIN actual','Para poder cambiarlo.',true,false);
+  if(lock.step==='changepin-new1') return pinScreenHTML('Nuevo PIN','Elige tu nuevo PIN de 4 dígitos.',true,false);
+  if(lock.step==='changepin-new2') return pinScreenHTML('Confírmalo','Escribe el nuevo PIN otra vez.',true,false);
+  lock.step='unlock';
+  return pinScreenHTML('Hola, '+esc(state.profile.name),'Escribe tu PIN para entrar.',false,true);
+}
+function mountLock(){
+  var existing=document.getElementById('lockScreen');
+  var html='<div id="lockScreen" class="lockscreen">'+lockHTML()+'</div>';
+  if(existing){ existing.outerHTML=html; }else{ document.body.insertAdjacentHTML('beforeend',html); }
+  var nameInput=document.getElementById('lk_name'); if(nameInput) nameInput.focus();
+}
+function unmountLock(){ var existing=document.getElementById('lockScreen'); if(existing) existing.remove(); }
+function afterUnlock(){
+  var gn=document.getElementById('greetName'); if(gn && state.profile) gn.textContent='Hola, '+state.profile.name;
+  render();
+}
+function handlePinComplete(){
+  var entry=lock.entry;
+  if(lock.step==='onboard-pin1'){ lock.pin1=entry; lock.entry=''; lock.step='onboard-pin2'; lock.err=''; mountLock(); return; }
+  if(lock.step==='onboard-pin2'){
+    if(entry!==lock.pin1){ lock.err='No coincide. Intenta de nuevo.'; lock.entry=''; lock.pin1=''; lock.step='onboard-pin1'; mountLock(); return; }
+    sha256hex(entry).then(function(hash){
+      state.profile={name:lock.name,pinHash:hash}; save(); setUnlocked();
+      lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''};
+      unmountLock(); afterUnlock();
+    });
+    return;
+  }
+  if(lock.step==='unlock'){
+    sha256hex(entry).then(function(hash){
+      if(state.profile && hash===state.profile.pinHash){
+        setUnlocked(); lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''}; unmountLock(); afterUnlock();
+      }else{
+        lock.attempts=(lock.attempts||0)+1; lock.err='PIN incorrecto.'; lock.entry=''; mountLock();
+      }
+    });
+    return;
+  }
+  if(lock.step==='changepin-old'){
+    sha256hex(entry).then(function(hash){
+      if(state.profile && hash===state.profile.pinHash){ lock.step='changepin-new1'; lock.entry=''; lock.err=''; mountLock(); }
+      else{ lock.err='PIN incorrecto.'; lock.entry=''; mountLock(); }
+    });
+    return;
+  }
+  if(lock.step==='changepin-new1'){ lock.pin1=entry; lock.entry=''; lock.step='changepin-new2'; lock.err=''; mountLock(); return; }
+  if(lock.step==='changepin-new2'){
+    if(entry!==lock.pin1){ lock.err='No coincide. Intenta de nuevo.'; lock.entry=''; lock.pin1=''; lock.step='changepin-new1'; mountLock(); return; }
+    sha256hex(entry).then(function(hash){
+      state.profile.pinHash=hash; save();
+      lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''}; unmountLock();
+      alert('Tu PIN se cambió correctamente.');
+    });
+    return;
+  }
+}
+document.addEventListener('click', function(e){
+  var nameNext=e.target.closest('#lk_nameNext');
+  if(nameNext){
+    var v=(document.getElementById('lk_name').value||'').trim();
+    if(!v){ alert('Escribe tu nombre.'); return; }
+    lock.name=v; lock.step='onboard-pin1'; lock.entry=''; lock.err=''; mountLock(); return;
+  }
+  var forgot=e.target.closest('#lk_forgot');
+  if(forgot){
+    if(confirm('Esto borra tu nombre y PIN para que los configures de nuevo. Tus medicamentos, suplementos y datos de alimentación NO se borran. ¿Continuar?')){
+      state.profile=null; save(); lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''}; mountLock();
+    }
+    return;
+  }
+  var cancelchange=e.target.closest('#lk_cancelchange');
+  if(cancelchange){ lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''}; unmountLock(); return; }
+  var pk=e.target.closest('[data-pk]');
+  if(pk){
+    var v2=pk.dataset.pk;
+    lock.entry=lock.entry||'';
+    if(v2==='del'){ lock.entry=lock.entry.slice(0,-1); mountLock(); return; }
+    if(lock.entry.length>=4) return;
+    lock.entry+=v2;
+    if(lock.entry.length===4) handlePinComplete(); else mountLock();
+  }
+});
+document.addEventListener('keydown', function(e){
+  var ls=document.getElementById('lockScreen'); if(!ls) return;
+  if(/^\d$/.test(e.key)){ var btn=ls.querySelector('[data-pk="'+e.key+'"]'); if(btn) btn.click(); }
+  else if(e.key==='Backspace'){ var del=ls.querySelector('[data-pk="del"]'); if(del) del.click(); }
+  else if(e.key==='Enter'){ var nx=ls.querySelector('#lk_nameNext'); if(nx) nx.click(); }
+});
 
 /* ================= utilidades de fecha ================= */
 function pad(n){ return (n<10?'0':'')+n; }
@@ -631,6 +782,13 @@ function renderAlimentacion(){
 function renderAjustes(){
   var h='<h1 class="view">Ajustes</h1><p class="view-sub">Tus datos y respaldo.</p>';
 
+  h+='<div class="card"><h2>Tu perfil</h2>'+
+     '<p class="lead">'+(state.profile?esc(state.profile.name):'Sin nombre configurado')+'</p>'+
+     '<div class="formactions">'+
+     '<button class="btn ghost small" data-changename="1">Cambiar nombre</button>'+
+     '<button class="btn ghost small" data-changepin="1">Cambiar PIN</button>'+
+     '</div></div>';
+
   h+='<div class="card"><h2>Tus datos y notas</h2>'+
      '<p class="small">Todo lo que marcas y configuras se guarda solo en este dispositivo, dentro del navegador. Nada se envía a internet. '+
      'Si cambias de teléfono o quieres un respaldo, usa "Exportar" abajo. El archivo de calendario (.ics) es tu respaldo de las alarmas y no se borra solo.</p></div>';
@@ -957,11 +1115,23 @@ document.body.addEventListener('click',function(e){
 
   var rst=t.closest('[data-reset]');
   if(rst){
-    if(confirm('¿Seguro que quieres borrar todos tus medicamentos y datos guardados? Esto no se puede deshacer.')){
-      state=baseState(); save(); go('hoy');
+    if(confirm('¿Seguro que quieres borrar todos tus medicamentos y datos guardados? También se borran tu nombre y PIN. Esto no se puede deshacer.')){
+      state=baseState(); save(); unmountLock(); lock={step:null,name:'',entry:'',pin1:'',attempts:0,err:''}; mountLock();
     }
     return;
   }
+  var chgname=t.closest('[data-changename]');
+  if(chgname){
+    var nv=prompt('Tu nombre:', state.profile?state.profile.name:'');
+    if(nv && nv.trim()){
+      state.profile.name=nv.trim(); save();
+      var gn=document.getElementById('greetName'); if(gn) gn.textContent='Hola, '+state.profile.name;
+      render();
+    }
+    return;
+  }
+  var chgpin=t.closest('[data-changepin]');
+  if(chgpin){ lock={step:'changepin-old',name:'',entry:'',pin1:'',attempts:0,err:''}; mountLock(); return; }
 });
 
 document.body.addEventListener('change',function(e){
@@ -1010,11 +1180,14 @@ if('serviceWorker' in navigator){
   });
 }
 
-render();
+if(needsLock()){ mountLock(); }else{
+  var gn0=document.getElementById('greetName'); if(gn0 && state.profile) gn0.textContent='Hola, '+state.profile.name;
+  render();
+}
 updateCountdown();
 setInterval(updateCountdown,1000);
-setInterval(function(){ if(active==='hoy') renderHoy(); },60000);
-document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
+setInterval(function(){ if(active==='hoy' && !needsLock()) renderHoy(); },60000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden && !needsLock()) render(); });
 })();
 </script>
 </body>
