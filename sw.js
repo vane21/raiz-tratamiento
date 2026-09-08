@@ -2,7 +2,7 @@
    por lo menos una vez con conexión. Estrategia: cache-first para lo propio de
    la app, con actualización en segundo plano. */
 
-var CACHE_VERSION = 'raiz-v2';
+var CACHE_VERSION = 'raiz-v3';
 var CORE_ASSETS = [
   './',
   './index.html',
