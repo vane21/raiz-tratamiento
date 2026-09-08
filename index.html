@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Raíz · mi tratamiento</title>
+<meta name="description" content="Control diario de medicamentos, suplementos y alimentación para endometriosis.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Raíz">
+<meta name="theme-color" content="#0F3D2E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#F4F6F1; --surface:#FFFFFF; --surface-2:#FBFCF9;
+    --ink:#17251E; --ink-soft:#5B6B60; --ink-faint:#8A988E;
+    --jungle:#0F3D2E; --jungle-2:#1B5E3F; --leaf:#2E7D52; --leaf-soft:#5EA97C;
+    --moss:#EAF0E6; --achiote:#C2542A; --achiote-soft:#E7A98F;
+    --gold:#B98F32; --gold-soft:#E4D2A0; --line:#E2E7DD;
+    --shadow:0 1px 2px rgba(16,45,36,.06), 0 8px 24px rgba(16,45,36,.06);
+    --serif:'Iowan Old Style','Palatino Linotype','Palatino','Georgia',ui-serif,serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Roboto,sans-serif;
+    --tabh:calc(58px + env(safe-area-inset-bottom));
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0E1613; --surface:#152019; --surface-2:#18241D;
+      --ink:#EAF0E6; --ink-soft:#A6B7AC; --ink-faint:#7C8D82;
+      --jungle:#0B2E22; --jungle-2:#14513A; --leaf:#4CA277; --leaf-soft:#3C7C5C;
+      --moss:#1B281F; --achiote:#D9714B; --gold:#D8B25A; --gold-soft:#5A4E2E;
+      --line:#28352C;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 26px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; overflow-x:hidden;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    padding-top:env(safe-area-inset-top);
+  }
+  .app{max-width:480px; margin:0 auto; min-height:100vh; position:relative;}
+
+  /* ---------- header ---------- */
+  header{
+    padding:14px 20px 10px; display:flex; align-items:center; gap:12px;
+  }
+  header img{width:34px; height:34px; border-radius:9px; display:block;}
+  .brand{font-family:var(--serif); font-size:20px; font-weight:600; letter-spacing:.2px;}
+  .brand small{display:block; font-family:var(--sans); font-size:11px; font-weight:600;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint);}
+
+  /* ---------- screens ---------- */
+  .screen{padding:6px 16px calc(var(--tabh) + 24px); display:none;}
+  .screen.active{display:block; animation:fade .22s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+  h1.view{font-family:var(--serif); font-size:30px; font-weight:600; margin:6px 4px 2px;}
+  .view-sub{color:var(--ink-soft); font-size:14px; margin:0 4px 16px;}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:18px;
+    padding:16px; margin-bottom:14px; box-shadow:var(--shadow);}
+  .card h2{font-family:var(--serif); font-size:18px; margin:0 0 4px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .card .lead{color:var(--ink-soft); font-size:13.5px; margin:0 0 12px;}
+
+  /* next dose hero */
+  .hero{background:linear-gradient(155deg,var(--jungle),var(--jungle-2));
+    color:#EAF3EC; border:none;}
+  .hero .k{font-size:11px; letter-spacing:.16em; text-transform:uppercase; opacity:.75;}
+  .hero .count{font-family:var(--serif); font-size:34px; font-weight:600; margin:4px 0 2px;}
+  .hero .who{font-size:15px; opacity:.92;}
+  .hero.done{background:linear-gradient(155deg,#1B5E3F,#2E7D52);}
+
+  /* dose row */
+  .dose{display:flex; align-items:center; gap:11px; padding:13px 2px; border-top:1px solid var(--line);}
+  .dose:first-of-type{border-top:none;}
+  .dose .time{font-variant-numeric:tabular-nums; font-weight:700; font-size:15px; width:58px; flex:none;}
+  .dose .time span{display:block; font-weight:500; font-size:11px; color:var(--ink-faint);}
+  .dose .body{flex:1; min-width:0;}
+  .dose .name{font-weight:600;}
+  .dose .meta{font-size:12.5px; color:var(--ink-soft);}
+  .chip{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px;
+    background:var(--moss); color:var(--leaf); font-weight:600; margin-top:3px;}
+  .dose.late .chip{background:var(--achiote-soft); color:#7a2f13;}
+  @media (prefers-color-scheme: dark){ .dose.late .chip{color:#3a140a;} }
+  .check{width:30px; height:30px; border-radius:999px; border:2px solid var(--leaf-soft);
+    flex:none; background:transparent; display:grid; place-items:center; cursor:pointer;
+    transition:transform .12s ease;}
+  .check:active{transform:scale(.9);}
+  .check.on{background:var(--leaf); border-color:var(--leaf);}
+  .check svg{width:16px; height:16px; stroke:#fff; stroke-width:3.2; fill:none; opacity:0;}
+  .check.on svg{opacity:1;}
+  .dose.taken .name{color:var(--ink-soft); text-decoration:line-through;}
+  .dose.late .time{color:var(--achiote);}
+
+  /* progress */
+  .bar{height:9px; border-radius:999px; background:var(--moss); overflow:hidden; margin:10px 0 6px;}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--leaf),var(--gold)); border-radius:999px;}
+  .status{display:inline-block; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px;}
+  .s-activo{background:var(--moss); color:var(--leaf);}
+  .s-espera{background:var(--gold-soft); color:var(--gold);}
+  .s-completo{background:#DDE7DE; color:var(--jungle-2);}
+  .s-config{background:var(--line); color:var(--ink-soft);}
+  @media (prefers-color-scheme: dark){ .s-completo{background:#243128; color:var(--leaf-soft);} }
+  .kv{display:flex; justify-content:space-between; font-size:13.5px; padding:5px 0; color:var(--ink-soft);}
+  .kv b{color:var(--ink); font-weight:600;}
+
+  .btn{font-family:var(--sans); font-size:15px; font-weight:650; border:none; cursor:pointer;
+    border-radius:13px; padding:13px 16px; width:100%; background:var(--leaf); color:#fff;
+    display:flex; align-items:center; justify-content:center; gap:8px;}
+  .btn:active{filter:brightness(.94);}
+  .btn[disabled]{opacity:.55; cursor:default;}
+  .btn[disabled]:active{filter:none;}
+  .btn.ghost{background:transparent; color:var(--leaf); border:1.5px solid var(--line);}
+  .btn.warn{background:transparent; color:var(--achiote); border:1.5px solid var(--achiote-soft);}
+  .btn.small{width:auto; padding:8px 14px; font-size:13.5px; border-radius:10px;}
+  a.btn{ text-decoration:none; }
+  .small{font-size:12.5px; color:var(--ink-soft);}
+
+  /* food lists */
+  .food-rules li{margin:7px 0; font-size:14px;}
+  .cat{margin-bottom:12px;}
+  .cat h3{font-family:var(--serif); font-size:15px; margin:0 0 6px; display:flex; align-items:center; gap:8px;}
+  .cat h3 .dot{width:9px; height:9px; border-radius:3px; background:var(--leaf); flex:none;}
+  .cat.avoid h3 .dot{background:var(--achiote);}
+  .tags{display:flex; flex-wrap:wrap; gap:7px;}
+  .tag{background:var(--moss); border:1px solid var(--line); color:var(--ink);
+    font-size:12.5px; padding:5px 10px; border-radius:10px;}
+  .cat.avoid .tag{background:transparent; color:var(--ink-soft); text-decoration:line-through;}
+
+  .counter{display:flex; align-items:center; gap:10px; margin-top:8px;}
+  .counter .val{font-family:var(--serif); font-size:26px; min-width:96px;}
+  .counter .val.over{color:var(--achiote);}
+  .counter button{flex:1; padding:11px 0; border-radius:11px; border:1.5px solid var(--line);
+    background:var(--surface-2); font-weight:700; font-size:14px; color:var(--ink); cursor:pointer;}
+
+  .collapse > summary{list-style:none; cursor:pointer; display:flex; justify-content:space-between;
+    align-items:center; font-weight:600;}
+  .collapse > summary::-webkit-details-marker{display:none;}
+  .collapse[open] > summary{margin-bottom:10px;}
+  .supp{display:flex; align-items:center; gap:12px; padding:10px 2px; border-top:1px solid var(--line);}
+  .supp:first-of-type{border-top:none;}
+  .supp .body{flex:1;} .supp .name{font-weight:600; font-size:14.5px;}
+  .supp .tip{font-size:12px; color:var(--ink-soft);}
+
+  input[type=time],input[type=text],input[type=number],input[type=date],
+  input[type=datetime-local],select{
+    font-family:var(--sans); font-size:15px; padding:9px 10px; border-radius:10px;
+    border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink); width:100%;}
+  .field{display:flex; justify-content:space-between; align-items:center; padding:9px 0; gap:10px;}
+  .field > span{flex:none;}
+  .field input, .field select{width:auto; max-width:62%;}
+
+  .banner{background:var(--gold-soft); color:#5b4718; border-radius:14px; padding:11px 14px;
+    font-size:13px; margin:0 0 14px; display:flex; gap:9px; align-items:flex-start;}
+  @media (prefers-color-scheme: dark){ .banner{color:var(--gold);} }
+  .banner b{display:block;}
+  .banner button{margin-left:auto; background:none; border:none; font-size:18px; color:inherit; cursor:pointer; line-height:1;}
+
+  /* ---------- formulario de medicamentos ---------- */
+  .formgrid{display:flex; flex-direction:column; gap:12px; margin-top:4px;}
+  .formgrid label{display:block; font-size:12.5px; font-weight:650; color:var(--ink-soft);
+    margin-bottom:5px; letter-spacing:.02em;}
+  .formgrid .row{display:flex; gap:10px;}
+  .formgrid .row > div{flex:1; min-width:0;}
+  .radiogroup{display:flex; flex-direction:column; gap:8px;}
+  .radiocard{display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1.5px solid var(--line);
+    border-radius:12px; cursor:pointer; background:var(--surface-2);}
+  .radiocard input{margin-top:3px; flex:none; width:auto;}
+  .radiocard .t{font-weight:650; font-size:14px;}
+  .radiocard .d{font-size:12.5px; color:var(--ink-soft); margin-top:1px;}
+  .radiocard.on{border-color:var(--leaf); background:var(--moss);}
+  .formactions{display:flex; gap:10px; margin-top:6px;}
+  .formactions .btn{width:auto; flex:1;}
+  .medcard{position:relative;}
+  .medcard .rowbtns{position:absolute; top:14px; right:14px; display:flex; gap:6px;}
+  .iconbtn{width:30px; height:30px; border-radius:9px; border:1.5px solid var(--line); background:var(--surface-2);
+    color:var(--ink-soft); font-size:14px; cursor:pointer; display:grid; place-items:center;}
+  .iconbtn:active{filter:brightness(.94);}
+  .empty-hint{text-align:center; padding:26px 14px; color:var(--ink-soft); font-size:13.5px;}
+
+  /* tab bar (móvil) */
+  nav.tabbar{position:fixed; left:0; right:0; bottom:0; z-index:20;
+    max-width:480px; margin:0 auto; height:var(--tabh);
+    padding-bottom:env(safe-area-inset-bottom);
+    display:flex; background:var(--surface);
+    border-top:1px solid var(--line); box-shadow:0 -6px 20px rgba(16,45,36,.05);}
+  nav.tabbar button{flex:1; background:none; border:none; cursor:pointer; color:var(--ink-faint);
+    font-size:10.5px; font-weight:650; letter-spacing:.02em; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:3px; padding-top:8px;}
+  nav.tabbar button svg{width:23px; height:23px; stroke:currentColor; fill:none; stroke-width:1.8;}
+  nav.tabbar button.on{color:var(--leaf);}
+  nav.tabbar button.on svg{stroke:var(--leaf);}
+
+  /* ---------- overlay del formulario ---------- */
+  .overlay{position:fixed; inset:0; z-index:60; background:rgba(15,25,20,.45);
+    display:flex; align-items:flex-end; justify-content:center;}
+  .sheet{background:var(--surface); width:100%; max-width:520px; max-height:92vh; overflow-y:auto;
+    border-radius:22px 22px 0 0; padding:18px 18px calc(24px + env(safe-area-inset-bottom));
+    box-shadow:0 -10px 40px rgba(0,0,0,.25);}
+  .sheetHead{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .sheetHead h2{font-family:var(--serif); font-size:19px;}
+  @media (min-width:760px){
+    .overlay{align-items:center;}
+    .sheet{border-radius:20px; max-height:86vh;}
+  }
+
+  /* ---------- escritorio / pantallas anchas ---------- */
+  @media (min-width:760px){
+    body{padding-top:0; display:flex; justify-content:center; background:
+      radial-gradient(1200px 800px at 50% -10%, var(--moss), var(--bg) 60%);
+      min-height:100vh;}
+    .app{max-width:1040px; margin:28px auto; min-height:calc(100vh - 56px);
+      display:grid; grid-template-columns:220px 1fr; grid-template-rows:auto 1fr;
+      background:var(--surface); border-radius:24px; box-shadow:var(--shadow);
+      overflow:hidden; border:1px solid var(--line);}
+    header{grid-column:1/2; grid-row:1/2; padding:22px 20px 14px;}
+    nav.tabbar{position:static; max-width:none; height:auto; grid-column:1/2; grid-row:2/3;
+      flex-direction:column; align-items:stretch; box-shadow:none; border-top:none;
+      border-right:1px solid var(--line); padding:6px 10px 20px; gap:2px;}
+    nav.tabbar button{flex-direction:row; justify-content:flex-start; gap:12px; padding:11px 12px;
+      border-radius:12px; font-size:13.5px;}
+    nav.tabbar button svg{width:20px; height:20px;}
+    nav.tabbar button.on{background:var(--moss);}
+    .screen{grid-column:2/3; grid-row:1/3; padding:28px 34px 40px; max-width:640px;
+      max-height:calc(100vh - 56px); overflow-y:auto;}
+    .screen.active{display:block;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <img src="icon-192.png" alt="">
+    <div class="brand">Raíz<small>Mi tratamiento</small></div>
+  </header>
+
+  <section id="tab-hoy" class="screen active"></section>
+  <section id="tab-tratamiento" class="screen"></section>
+  <section id="tab-alimentacion" class="screen"></section>
+  <section id="tab-ajustes" class="screen"></section>
+
+  <nav class="tabbar">
+    <button data-tab="hoy" class="on">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Hoy</button>
+    <button data-tab="tratamiento">
+      <svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="3"/><path d="M8 8V6a4 4 0 0 1 8 0v2M9 14h6"/></svg>Tratamiento</button>
+    <button data-tab="alimentacion">
+      <svg viewBox="0 0 24 24"><path d="M6 3v8a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.5 1-2.5 3-2.5 6s1 4 2.5 4 2.5-1 2.5-4-1-5-2.5-6zM17 13v8"/></svg>Alimentación</button>
+    <button data-tab="ajustes">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1H3a2 2 0 0 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>Ajustes</button>
+  </nav>
+</div>
+<script>
+(function(){
+'use strict';
+var LS_KEY='raiz_v2';
+
+var MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var DAYS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+/* ================= estado / almacenamiento ================= */
+var persistWorks=true;
+function baseState(){
+  return {v:2, meds:[], taken:{}, redMeat:null, dismiss:{}};
+}
+function load(){
+  var base=baseState();
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(!raw) return base;
+    var p=JSON.parse(raw);
+    if(!p || typeof p!=='object') return base;
+    p.meds=Array.isArray(p.meds)?p.meds:[];
+    p.taken=p.taken&&typeof p.taken==='object'?p.taken:{};
+    p.dismiss=p.dismiss&&typeof p.dismiss==='object'?p.dismiss:{};
+    return Object.assign(base,p);
+  }catch(e){ persistWorks=false; return base; }
+}
+var state=load();
+function save(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(state)); }catch(e){ persistWorks=false; } }
+
+/* ================= utilidades de fecha ================= */
+function pad(n){ return (n<10?'0':'')+n; }
+function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseYMD(s){ var a=s.split('-'); return new Date(+a[0],+a[1]-1,+a[2]); }
+function sod(d){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function addDays(d,n){ return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n); }
+function hm(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function h12(t){ var a=t.split(':'),H=+a[0],M=a[1]; var ap=H<12?'a.m.':'p.m.'; var h=H%12; if(h===0)h=12; return h+':'+M+' '+ap; }
+function longDate(d){ return DAYS[d.getDay()]+', '+d.getDate()+' de '+MONTHS[d.getMonth()]; }
+function shortDate(d){ return d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3); }
+function dayDiff(a,b){ return Math.round((sod(a)-sod(b))/86400000); }
+function parseLocalDateTime(str){
+  if(!str) return null;
+  var m=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(str);
+  if(!m) return null;
+  return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+}
+function combineDateTime(dateStr,timeStr){
+  if(!dateStr) return null;
+  var dp=dateStr.split('-'), tp=(timeStr||'08:00').split(':');
+  return new Date(+dp[0],+dp[1]-1,+dp[2],+tp[0],+tp[1]);
+}
+function fmtDateTimeLocal(d){ return ymd(d)+'T'+hm(d); }
+
+/* ================= motor genérico de medicamentos ================= */
+/* Cada medicamento con horario (kind:'med') se define por:
+     stepHours   : cada cuántas horas se repite (8, 24, 168, o cualquier número)
+     startMode   : 'fixed' (fecha/hora exacta) | 'event' (yo la marco después) | 'after' (el día siguiente a que termine otro medicamento)
+     fixedStart  : 'YYYY-MM-DDTHH:MM' (si startMode=fixed)
+     eventDate   : 'YYYY-MM-DD' o null (si startMode=event, se llena cuando ella marca el inicio)
+     startTime   : 'HH:MM' (si startMode=event o after)
+     afterId     : id de otro medicamento (si startMode=after)
+     endMode     : 'count' (número fijo de tomas) | 'indefinite' (sin fin) | 'cycle' (se repite cada N tomas, ej. caja de 28)
+     totalDoses  : número (si endMode=count)
+     cycleLength : número (si endMode=cycle)
+   Los suplementos (kind:'supp') no tienen horario: solo se marcan como tomados cada día. */
+
+function uid(){ return 'm_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function getMed(id){ for(var i=0;i<state.meds.length;i++){ if(state.meds[i].id===id) return state.meds[i]; } return null; }
+function activeMeds(){ return state.meds.filter(function(m){ return m.kind==='med' && !m.archived; }); }
+function activeSupps(){ return state.meds.filter(function(m){ return m.kind==='supp' && !m.archived; }); }
+
+function resolveStart(med,_depth){
+  _depth=_depth||0;
+  if(_depth>6) return null; // corta ciclos de dependencia (A después de B después de A...)
+  if(med.startMode==='fixed') return parseLocalDateTime(med.fixedStart);
+  if(med.startMode==='event') return med.eventDate? combineDateTime(med.eventDate,med.startTime):null;
+  if(med.startMode==='after'){
+    var dep=getMed(med.afterId); if(!dep) return null;
+    var dr=rangeOf(dep,_depth+1); if(!dr.end) return null;
+    return combineDateTime(ymd(addDays(dr.end,1)),med.startTime);
+  }
+  return null;
+}
+function rangeOf(med,_depth){
+  if(med.kind!=='med') return {start:null,end:null};
+  var start=resolveStart(med,_depth);
+  if(!start) return {start:null,end:null};
+  var end=null;
+  if(med.endMode==='count' && med.totalDoses){ end=new Date(start.getTime()+(med.totalDoses-1)*med.stepHours*3600000); }
+  return {start:start,end:end};
+}
+function occurrencesOnDate(med,d){
+  if(med.kind!=='med' || med.archived) return [];
+  var r=rangeOf(med);
+  if(!r.start) return [];
+  var t=sod(d).getTime();
+  if(t<sod(r.start).getTime()) return [];
+  if(r.end && t>sod(r.end).getTime()) return [];
+  var list=[];
+  if(med.stepHours<24){
+    var n=Math.min(med.totalDoses||0,1000);
+    for(var i=0;i<n;i++){
+      var dt=new Date(r.start.getTime()+i*med.stepHours*3600000);
+      if(sameDay(dt,d)) list.push({dt:dt,num:i+1,total:n});
+    }
+  }else{
+    var stepDays=med.stepHours/24;
+    var dayIndex=dayDiff(d,r.start);
+    if(dayIndex>=0 && dayIndex%stepDays===0){
+      var idx=dayIndex/stepDays;
+      var dt2=new Date(r.start.getTime()+idx*med.stepHours*3600000);
+      var num,total;
+      if(med.endMode==='cycle'){ num=(idx%med.cycleLength)+1; total=med.cycleLength; }
+      else{ total=med.totalDoses||null; num=total? Math.min(idx+1,total): idx+1; }
+      list.push({dt:dt2,num:num,total:total});
+    }
+  }
+  return list;
+}
+function dosesForDate(d){
+  var list=[];
+  activeMeds().forEach(function(m){
+    occurrencesOnDate(m,d).forEach(function(o){
+      list.push({medId:m.id,name:m.name,dose:m.dose,note:m.note,time:hm(o.dt),dt:o.dt,num:o.num,total:o.total});
+    });
+  });
+  list.sort(function(a,b){ return a.time<b.time?-1:a.time>b.time?1:0; });
+  return list;
+}
+function nextDose(now){
+  for(var k=0;k<180;k++){
+    var ds=dosesForDate(addDays(sod(now),k));
+    for(var j=0;j<ds.length;j++){ if(ds[j].dt>now) return ds[j]; }
+  }
+  return null;
+}
+function medStatus(med,now){
+  var r=rangeOf(med);
+  if(!r.start) return {state:'config'};
+  if(now<r.start) return {state:'espera',start:r.start};
+  if(r.end && now>r.end) return {state:'completo',start:r.start,end:r.end};
+  var idx;
+  if(med.stepHours<24){ idx=Math.floor((now-r.start)/(med.stepHours*3600000)); }
+  else{ idx=Math.floor(dayDiff(now,r.start)/(med.stepHours/24)); }
+  if(idx<0) idx=0;
+  var num,total,box;
+  if(med.endMode==='cycle'){ num=(idx%med.cycleLength)+1; total=med.cycleLength; box=Math.floor(idx/med.cycleLength)+1; }
+  else{ total=med.totalDoses||null; num=total? Math.min(idx+1,total): idx+1; }
+  return {state:'activo',start:r.start,end:r.end,num:num,total:total,idx:idx,box:box};
+}
+
+/* ================= marcas de "tomado" ================= */
+function markKey(ds,id,time){ return ds+'|'+id+'|'+(time||''); }
+function isMarked(ds,id,time){ return !!state.taken[markKey(ds,id,time)]; }
+function toggleMark(ds,id,time){ var k=markKey(ds,id,time); if(state.taken[k]) delete state.taken[k]; else state.taken[k]=true; save(); render(); }
+
+function mondayOf(d){ var x=sod(d); var wd=(x.getDay()+6)%7; return addDays(x,-wd); }
+function redMeat(){
+  var wk=ymd(mondayOf(new Date()));
+  if(!state.redMeat||state.redMeat.weekStart!==wk){ state.redMeat={weekStart:wk,grams:0}; save(); }
+  return state.redMeat;
+}
+
+/* ================= helpers de render ================= */
+function el(html){ var d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+var TICK='<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>';
+
+function doseRow(dstr,x,now){
+  var isTaken=isMarked(dstr,x.medId,x.time);
+  var late=!isTaken && x.dt<now;
+  var cls='dose'+(isTaken?' taken':'')+(late?' late':'');
+  var chip = isTaken? 'Tomado' : late? 'Atrasada' : (x.total? ('Dosis '+x.num+' de '+x.total) : ('Dosis '+x.num));
+  return '<div class="'+cls+'">'+
+    '<div class="time">'+h12(x.time).split(' ')[0]+'<span>'+h12(x.time).split(' ').slice(1).join(' ')+'</span></div>'+
+    '<div class="body"><div class="name">'+esc(x.name)+'</div>'+
+      '<div class="meta">'+esc(x.dose)+(x.note?' · '+esc(x.note):'')+'</div>'+
+      '<span class="chip">'+chip+'</span></div>'+
+    '<button class="check'+(isTaken?' on':'')+'" data-take="'+dstr+'|'+x.medId+'|'+x.time+'" aria-label="Marcar tomado">'+TICK+'</button>'+
+  '</div>';
+}
+
+/* ================= vista: HOY ================= */
+function renderHoy(){
+  var now=new Date(), dstr=ymd(now);
+  var doses=dosesForDate(now);
+  var nd=nextDose(now);
+  var h='<h1 class="view">Hoy</h1><p class="view-sub">'+longDate(now)+'</p>';
+
+  if(!persistWorks){
+    h+='<div class="banner"><span>⚠️</span><div><b>Aviso</b>Este dispositivo no está guardando las marcas. Igual puedes usar la app, pero al cerrarla se olvidan los "tomado".</div></div>';
+  }
+  var standalone = window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if(!standalone && !state.dismiss.install){
+    h+='<div class="banner"><span>📲</span><div><b>Instálala como app</b>En iPhone: botón Compartir → "Agregar a inicio". En Android: menú ⋮ → "Instalar app" o "Añadir a pantalla de inicio".</div><button data-dismiss="install">×</button></div>';
+  }
+
+  if(nd){
+    var txt=countdownText(nd.dt-now);
+    var whenDay = sameDay(nd.dt,now)? 'hoy' : sameDay(nd.dt,addDays(now,1))? 'mañana' : longDate(nd.dt);
+    h+='<div class="card hero"><div class="k">Próxima dosis</div>'+
+       '<div class="count" id="cd">'+txt+'</div>'+
+       '<div class="who">'+esc(nd.name)+' · '+h12(nd.time)+' ('+whenDay+')</div></div>';
+  }else if(activeMeds().length===0){
+    h+='<div class="card hero"><div class="k">Empecemos</div><div class="count">Sin medicamentos aún</div>'+
+       '<div class="who">Agrega el primero en la pestaña Tratamiento.</div></div>';
+  }else{
+    h+='<div class="card hero done"><div class="k">Tratamiento</div><div class="count">Todo al día</div><div class="who">No quedan dosis programadas próximamente.</div></div>';
+  }
+
+  if(doses.length){
+    h+='<div class="card"><h2>Dosis de hoy</h2><p class="lead">Marca cada una cuando la tomes.</p>';
+    doses.forEach(function(x){ h+=doseRow(dstr,x,now); });
+    h+='</div>';
+  }
+
+  var supps=activeSupps();
+  if(supps.length){
+    h+='<details class="card collapse"'+(state.dismiss.suppOpen?' open':'')+' id="suppBox"><summary>Suplementos de hoy <span class="small">'+
+       supps.filter(function(s){return isMarked(dstr,s.id,'');}).length+'/'+supps.length+'</span></summary>';
+    supps.forEach(function(s){
+      var on=isMarked(dstr,s.id,'');
+      h+='<div class="supp"><div class="body"><div class="name">'+esc(s.name)+'</div>'+(s.note?'<div class="tip">'+esc(s.note)+'</div>':'')+'</div>'+
+         '<button class="check'+(on?' on':'')+'" data-take="'+dstr+'|'+s.id+'|" aria-label="Marcar">'+TICK+'</button></div>';
+    });
+    h+='<p class="small" style="margin:10px 2px 0">Sin horario médico estricto. Buenas prácticas de absorción, con flexibilidad.</p></details>';
+  }
+
+  document.getElementById('tab-hoy').innerHTML=h;
+}
+
+function countdownText(ms){
+  var mins=Math.round(ms/60000);
+  if(mins<=0) return 'Es ahora';
+  if(mins<60) return 'en '+mins+' min';
+  var hrs=Math.floor(mins/60);
+  if(hrs<24) return 'en '+hrs+' h '+(mins%60)+' min';
+  var days=Math.round(hrs/24);
+  return 'en '+days+(days===1?' día':' días');
+}
+function updateCountdown(){
+  var cd=document.getElementById('cd'); if(!cd) return;
+  var now=new Date(), nd=nextDose(now); if(!nd){ return; }
+  cd.textContent=countdownText(nd.dt-now);
+}
+
+/* ================= vista: TRATAMIENTO ================= */
+function medCard(m,now){
+  var st=medStatus(m,now);
+  var label = st.state==='config'?'Falta configurar':st.state==='espera'?'Aún no inicia':st.state==='completo'?'Completa':'En curso';
+  var cls = st.state==='config'?'s-config':'s-'+st.state;
+  var h='<div class="card medcard"><div class="rowbtns">'+
+    '<button class="iconbtn" data-editmed="'+m.id+'" aria-label="Editar">✏️</button>'+
+    '<button class="iconbtn" data-delmed="'+m.id+'" aria-label="Borrar">🗑️</button></div>'+
+    '<h2 style="padding-right:76px">'+esc(m.name)+'</h2>';
+  if(m.dose||m.note) h+='<p class="lead">'+esc(m.dose)+(m.dose&&m.note?' · ':'')+esc(m.note)+'</p>';
+  h+='<span class="status '+cls+'">'+label+'</span>';
+
+  if(st.state==='activo'||st.state==='completo'){
+    if(st.total){
+      var pct=Math.round((st.num/st.total)*100);
+      h+='<div class="bar"><i style="width:'+Math.min(100,Math.max(0,pct))+'%"></i></div>'+
+         '<div class="kv"><span>Progreso</span><b>'+st.num+' de '+st.total+'</b></div>';
+      if(m.endMode==='cycle') h+='<div class="kv"><span>Caja / ciclo actual</span><b>Nº '+st.box+'</b></div>';
+    }else{
+      h+='<div class="kv"><span>Progreso</span><b>Día '+(st.idx+1)+'</b></div>';
+    }
+    h+='<div class="kv"><span>Empezó</span><b>'+longDate(st.start)+'</b></div>';
+    if(st.end) h+='<div class="kv"><span>Termina</span><b>'+longDate(st.end)+'</b></div>';
+  }else if(st.state==='espera'){
+    h+='<p class="small" style="margin-top:8px">Empieza el '+longDate(st.start)+'.</p>';
+  }else if(st.state==='config'){
+    if(m.startMode==='event'){
+      h+='<p class="lead" style="margin-top:10px">Se activa cuando tú marques la fecha (por ejemplo, el primer día de tu período).</p>'+
+         '<div class="formactions"><button class="btn" data-markevent="'+m.id+'">Marcar inicio hoy</button>'+
+         '<button class="btn ghost" data-fixevent="'+m.id+'">Otra fecha</button></div>';
+    }else if(m.startMode==='after'){
+      var dep=getMed(m.afterId);
+      h+='<p class="small" style="margin-top:8px">Empieza el día después de terminar «'+(dep?esc(dep.name):'un medicamento que ya no existe')+'».</p>';
+    }else{
+      h+='<p class="small" style="margin-top:8px">Revisa la fecha de inicio en Editar.</p>';
+    }
+  }
+  if(m.startMode==='event' && m.eventDate && st.state!=='config'){
+    h+='<button class="btn ghost small" style="margin-top:12px" data-fixevent="'+m.id+'">Corregir fecha de inicio</button>';
+  }
+  h+='</div>';
+  return h;
+}
+function suppRow(m){
+  return '<div class="supp"><div class="body"><div class="name">'+esc(m.name)+'</div>'+(m.note?'<div class="tip">'+esc(m.note)+'</div>':'')+'</div>'+
+    '<button class="iconbtn" data-editmed="'+m.id+'" aria-label="Editar" style="margin-right:2px">✏️</button>'+
+    '<button class="iconbtn" data-delmed="'+m.id+'" aria-label="Borrar">🗑️</button></div>';
+}
+
+function renderTratamiento(){
+  var now=new Date();
+  var meds=activeMeds(), supps=activeSupps();
+  var h='<h1 class="view">Tratamiento</h1><p class="view-sub">Tu avance en cada medicamento.</p>';
+
+  h+='<button class="btn" data-openform="med" style="margin-bottom:14px">+ Agregar medicamento</button>';
+
+  if(!meds.length){
+    h+='<div class="card"><p class="empty-hint">Aún no tienes medicamentos con horario. Toca «+ Agregar medicamento» para crear el primero: nombre, dosis, cada cuánto se toma y cuándo empieza.</p></div>';
+  }else{
+    meds.forEach(function(m){ h+=medCard(m,now); });
+  }
+
+  h+='<div class="card"><h2>Suplementos<button class="iconbtn" data-openform="supp" aria-label="Agregar suplemento" style="position:static; margin-left:auto">+</button></h2>'+
+     '<p class="lead">Sin horario fijo — solo se marcan cuando los tomas.</p>';
+  if(!supps.length){
+    h+='<p class="small">No tienes suplementos guardados todavía.</p>';
+  }else{
+    supps.forEach(function(m){ h+=suppRow(m); });
+  }
+  h+='</div>';
+
+  var icsCount=state.meds.filter(function(m){return m.kind==='med'&&!m.archived&&m.endMode==='count'&&rangeOf(m).start;}).length;
+  h+='<div class="card"><h2>Alarmas del calendario</h2>'+
+     '<p class="lead">El navegador no puede sonar en segundo plano. Agrega estas alarmas a tu app de Calendario y sonarán aunque el teléfono esté bloqueado.</p>'+
+     (icsCount? '<a class="btn" id="icsLink" download="alarmas_tratamiento.ics">Añadir alarmas al Calendario</a>' :
+        '<button class="btn ghost" disabled>Aún no hay medicamentos con fecha fija</button>')+
+     '<p class="small" style="margin:10px 2px 0">Incluye los medicamentos con número fijo de tomas y fecha ya definida. Los que dependen de un evento (como el período) no van aquí: se activan desde su tarjeta cuando llega el momento.</p></div>';
+
+  document.getElementById('tab-tratamiento').innerHTML=h;
+  var link=document.getElementById('icsLink');
+  if(link){ link.setAttribute('href','data:text/calendar;charset=utf-8,'+encodeURIComponent(buildICS())); }
+}
+
+/* ================= vista: ALIMENTACIÓN ================= */
+var FOOD_RULES=[
+  'Carnes rojas: máximo 250 g a la semana.',
+  'Sin embutidos: salchicha, mortadela, salchichón, jamón.',
+  'Sin jamón serrano ni carnes procesadas.',
+  'Sin gluten: nada de productos con harina de trigo (pan, pasta, galletas, tortas).',
+  'Nada de alimentos servidos en empaques de icopor.',
+  'Bebidas en vidrio o envases libres de BPA, no en plástico.',
+  'Ejercicio aeróbico mínimo 4 veces por semana, de 40 a 60 minutos.',
+  'Evitar frituras en teflón muy caliente o abusar de la freidora de aire.'
+];
+var FOOD_CATS=[
+  {t:'Proteína',items:['Pescado de río: bocachico','cachama','sábalo','Pollo','Huevo campesino','Fríjol','Lenteja','Arveja']},
+  {t:'Carbohidratos sin gluten',items:['Plátano','Yuca','Chontaduro','Arroz','Arepa/tortilla de maíz','Papa china','Sagú (achira)','Ñame']},
+  {t:'Frutas amazónicas',items:['Arazá','Copoazú','Cocona','Borojó','Piña','Papaya','Maracuyá','Guama','Banano']},
+  {t:'Verduras y grasas buenas',items:['Verduras de la plaza local','Aguacate','Aceite de oliva','Aceite de sacha inchi','Ahuyama','Habichuela','Zanahoria']},
+  {t:'Evitar',avoid:true,items:['Embutidos y jamón serrano','Pan / pasta / harina de trigo','Comida en icopor','Gaseosas y jugos en botella plástica','Frituras en teflón muy caliente','Snacks ultraprocesados']}
+];
+function renderAlimentacion(){
+  var rm=redMeat();
+  var over=rm.grams>250;
+  var h='<h1 class="view">Alimentación</h1><p class="view-sub">Según las indicaciones de tu médica, con alimentos de Mocoa.</p>';
+
+  h+='<div class="card"><h2>Indicaciones de mi médica</h2><ul class="food-rules" style="padding-left:18px; margin:6px 0 0">';
+  FOOD_RULES.forEach(function(r){ h+='<li>'+esc(r)+'</li>'; });
+  h+='</ul></div>';
+
+  h+='<div class="card"><h2>Carne roja esta semana</h2><p class="lead">Tope: 250 g por semana. Se reinicia cada lunes.</p>'+
+     '<div class="counter"><div class="val'+(over?' over':'')+'">'+rm.grams+' g</div>'+
+     '<button data-meat="50">+50 g</button><button data-meat="100">+100 g</button><button data-meat="-50">−50 g</button></div>'+
+     (over?'<p class="small" style="color:var(--achiote); margin:10px 2px 0">Ya pasaste el tope de esta semana.</p>':
+           '<p class="small" style="margin:10px 2px 0">Te quedan '+(250-rm.grams)+' g.</p>')+'</div>';
+
+  FOOD_CATS.forEach(function(c){
+    h+='<div class="card cat'+(c.avoid?' avoid':'')+'"><h3><span class="dot"></span>'+c.t+'</h3><div class="tags">';
+    c.items.forEach(function(it){ h+='<span class="tag">'+esc(it)+'</span>'; });
+    h+='</div></div>';
+  });
+
+  h+='<p class="small" style="text-align:center; padding:0 10px 8px">La disponibilidad cambia según la temporada y la plaza de mercado de Mocoa. Ajusta con lo que encuentres fresco.</p>';
+  document.getElementById('tab-alimentacion').innerHTML=h;
+}
+
+/* ================= vista: AJUSTES ================= */
+function renderAjustes(){
+  var h='<h1 class="view">Ajustes</h1><p class="view-sub">Tus datos y respaldo.</p>';
+
+  h+='<div class="card"><h2>Tus datos y notas</h2>'+
+     '<p class="small">Todo lo que marcas y configuras se guarda solo en este dispositivo, dentro del navegador. Nada se envía a internet. '+
+     'Si cambias de teléfono o quieres un respaldo, usa "Exportar" abajo. El archivo de calendario (.ics) es tu respaldo de las alarmas y no se borra solo.</p></div>';
+
+  h+='<div class="card"><h2>Respaldo</h2><p class="lead">Guarda o restaura tus medicamentos, marcas y avances.</p>'+
+     '<a class="btn ghost" id="exportLink" download="raiz_respaldo.json" style="margin-bottom:10px">Exportar mis datos</a>'+
+     '<button class="btn ghost" data-importbtn="1">Importar datos</button>'+
+     '<input type="file" id="importFile" accept="application/json" style="display:none">'+
+     '</div>';
+
+  h+='<div class="card"><h2>Reiniciar</h2>'+
+     '<p class="lead">Borra todos los medicamentos, marcas, período registrado y el contador de carne roja. No se puede deshacer.</p>'+
+     '<button class="btn warn" data-reset="1">Borrar todos mis datos</button></div>';
+
+  h+='<p class="small" style="text-align:center; padding:4px 10px 8px">Raíz · hecha para tu tratamiento de endometriosis. No reemplaza el consejo de tu médica.</p>';
+  document.getElementById('tab-ajustes').innerHTML=h;
+
+  var exp=document.getElementById('exportLink');
+  if(exp){ exp.setAttribute('href','data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(state,null,2))); }
+}
+
+/* ================= generación del .ics ================= */
+function icsFmt(d){ return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00'; }
+function icsStamp(){ var s=new Date().toISOString(); return s.replace(/[-:]/g,'').split('.')[0]+'Z'; }
+function icsEsc(s){ return String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function vevent(uid,start,mins,summary,desc){
+  var end=new Date(start.getTime()+mins*60000);
+  return ['BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+icsStamp(),
+    'DTSTART;TZID=America/Bogota:'+icsFmt(start),'DTEND;TZID=America/Bogota:'+icsFmt(end),
+    'SUMMARY:'+icsEsc(summary),'DESCRIPTION:'+icsEsc(desc),
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(summary),'TRIGGER:PT0S','END:VALARM',
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc('En 10 minutos: '+summary),'TRIGGER:-PT10M','END:VALARM',
+    'END:VEVENT'].join('\r\n');
+}
+function buildICS(){
+  var ev=[];
+  state.meds.forEach(function(m){
+    if(m.kind!=='med'||m.archived||m.endMode!=='count') return;
+    var r=rangeOf(m); if(!r.start||!m.totalDoses) return;
+    var total=Math.min(m.totalDoses,500);
+    for(var i=0;i<total;i++){
+      var dt=new Date(r.start.getTime()+i*m.stepHours*3600000);
+      var summary='💊 '+m.name+(m.dose?' '+m.dose:'')+' — dosis '+(i+1)+'/'+total;
+      var desc=(m.note?m.note+'. ':'')+'Dosis '+(i+1)+' de '+total+'.';
+      ev.push(vevent(m.id+'-'+pad(i+1)+'@raiz',dt,5,summary,desc));
+    }
+  });
+  var cal=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Raiz//Tratamiento Endometriosis//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'X-WR-CALNAME:Tratamiento (medicamentos)','X-WR-TIMEZONE:America/Bogota',
+    'BEGIN:VTIMEZONE','TZID:America/Bogota','BEGIN:STANDARD','DTSTART:19930403T000000','TZOFFSETFROM:-0500','TZOFFSETTO:-0500','TZNAME:-05','END:STANDARD','END:VTIMEZONE'
+  ].concat(ev).concat(['END:VCALENDAR','']).join('\r\n');
+  return cal.split('\r\n').map(icsFold).join('\r\n');
+}
+function icsFold(line){
+  if(line.length<=74) return line;
+  var parts=[],s=line;
+  while(s.length>73){ parts.push(s.slice(0,73)); s=s.slice(73); }
+  parts.push(s);
+  return parts.join('\r\n ');
+}
+
+/* ================= formulario: agregar / editar medicamento o suplemento ================= */
+var formState=null; // {kind:'med'|'supp', editId:id|null}
+
+function freqFromStep(h){ if(h===24) return 'daily'; if(h===168) return 'weekly'; return 'interval'; }
+function stepFromFreq(freq,hoursInput){
+  if(freq==='daily') return 24;
+  if(freq==='weekly') return 168;
+  return Math.max(1,+hoursInput||8);
+}
+
+function formOverlayHTML(){
+  var kind=formState.kind;
+  var editing=formState.editId?getMed(formState.editId):null;
+
+  if(kind==='supp'){
+    var nm=editing?esc(editing.name):'', tp=editing?esc(editing.note||''):'';
+    return '<div class="overlay" id="formOverlay"><div class="sheet"><div class="sheetHead">'+
+      '<h2 style="margin:0">'+(editing?'Editar suplemento':'Nuevo suplemento')+'</h2>'+
+      '<button class="iconbtn" data-closeform="1" aria-label="Cerrar">✕</button></div>'+
+      '<div class="formgrid">'+
+      '<div><label>Nombre</label><input type="text" id="f_name" value="'+nm+'" placeholder="Ej. Omega 3"></div>'+
+      '<div><label>Nota (opcional)</label><input type="text" id="f_note" value="'+tp+'" placeholder="Ej. Con una comida que tenga grasa"></div>'+
+      '<div class="formactions"><button class="btn ghost" data-closeform="1">Cancelar</button><button class="btn" data-savesupp="1">Guardar</button></div>'+
+      '</div></div></div>';
+  }
+
+  // kind === 'med'
+  var m=editing||{name:'',dose:'',note:'',stepHours:24,startMode:'fixed',fixedStart:'',eventDate:null,startTime:'08:00',afterId:'',endMode:'count',totalDoses:'',cycleLength:28};
+  var freq=freqFromStep(m.stepHours);
+  var otherMeds=state.meds.filter(function(x){ return x.kind==='med' && x.id!==m.id; });
+
+  var h='<div class="overlay" id="formOverlay"><div class="sheet"><div class="sheetHead">'+
+    '<h2 style="margin:0">'+(editing?'Editar medicamento':'Nuevo medicamento')+'</h2>'+
+    '<button class="iconbtn" data-closeform="1" aria-label="Cerrar">✕</button></div>'+
+    '<div class="formgrid">';
+
+  h+='<div><label>Nombre</label><input type="text" id="f_name" value="'+esc(m.name)+'" placeholder="Ej. Rifaximina"></div>';
+  h+='<div class="row"><div><label>Dosis</label><input type="text" id="f_dose" value="'+esc(m.dose)+'" placeholder="Ej. 550 mg · 1 tableta"></div>'+
+     '<div><label>Nota</label><input type="text" id="f_note" value="'+esc(m.note)+'" placeholder="Ej. Vía oral"></div></div>';
+
+  h+='<div><label>¿Cada cuánto se toma?</label><select id="f_freq">'+
+     '<option value="daily"'+(freq==='daily'?' selected':'')+'>Todos los días</option>'+
+     '<option value="weekly"'+(freq==='weekly'?' selected':'')+'>Una vez por semana</option>'+
+     '<option value="interval"'+(freq==='interval'?' selected':'')+'>Cada cierto número de horas</option>'+
+     '</select></div>';
+  h+='<div id="f_hoursWrap" style="'+(freq==='interval'?'':'display:none')+'"><label>¿Cada cuántas horas?</label>'+
+     '<input type="number" id="f_hours" min="1" max="72" value="'+(freq==='interval'?m.stepHours:8)+'"></div>';
+
+  h+='<div><label>¿Cuándo empieza?</label><select id="f_startmode">'+
+     '<option value="fixed"'+(m.startMode==='fixed'?' selected':'')+'>En una fecha y hora exacta</option>'+
+     '<option value="event"'+(m.startMode==='event'?' selected':'')+'>Cuando yo la marque (ej. tu período)</option>'+
+     '<option value="after"'+(m.startMode==='after'?' selected':'')+(otherMeds.length?'':' disabled')+'>El día después de terminar otro medicamento</option>'+
+     '</select></div>';
+
+  h+='<div id="f_fixedWrap" style="'+(m.startMode==='fixed'?'':'display:none')+'"><label>Fecha y hora de inicio</label>'+
+     '<input type="datetime-local" id="f_fixedstart" value="'+(m.fixedStart||'')+'"></div>';
+
+  h+='<div id="f_timeWrap" style="'+(m.startMode!=='fixed'?'':'display:none')+'"><label>Hora del día</label>'+
+     '<input type="time" id="f_starttime" value="'+(m.startTime||'08:00')+'"></div>';
+
+  h+='<div id="f_afterWrap" style="'+(m.startMode==='after'?'':'display:none')+'"><label>Después de terminar…</label><select id="f_afterid">';
+  otherMeds.forEach(function(x){ h+='<option value="'+x.id+'"'+(m.afterId===x.id?' selected':'')+'>'+esc(x.name)+'</option>'; });
+  if(!otherMeds.length) h+='<option value="">Agrega primero otro medicamento</option>';
+  h+='</select></div>';
+
+  h+='<div id="f_endmodeWrap" style="'+(freq==='daily'?'':'display:none')+'"><label>Duración</label><select id="f_endmode">'+
+     '<option value="count"'+(m.endMode==='count'?' selected':'')+'>Número fijo de días</option>'+
+     '<option value="indefinite"'+(m.endMode==='indefinite'?' selected':'')+'>Sin fecha de fin</option>'+
+     '<option value="cycle"'+(m.endMode==='cycle'?' selected':'')+'>Sin fin, mostrar caja/ciclo (ej. 28 días)</option>'+
+     '</select></div>';
+
+  h+='<div id="f_countWrap" style="'+((freq==='daily'?m.endMode:'count')==='count'?'':'display:none')+'"><label id="f_countLabel">'+
+     (freq==='weekly'?'Número de semanas':freq==='interval'?'Número de tomas':'Número de días')+'</label>'+
+     '<input type="number" id="f_total" min="1" max="500" value="'+(m.totalDoses||'')+'"></div>';
+
+  h+='<div id="f_cycleWrap" style="'+(freq==='daily'&&m.endMode==='cycle'?'':'display:none')+'"><label>Duración del ciclo (días)</label>'+
+     '<input type="number" id="f_cycle" min="1" max="365" value="'+(m.cycleLength||28)+'"></div>';
+
+  h+='</div>'+
+     '<div class="formactions" style="margin-top:14px"><button class="btn ghost" data-closeform="1">Cancelar</button>'+
+     '<button class="btn" data-savemed="1">Guardar</button></div>'+
+     '</div></div>';
+  return h;
+}
+
+function openForm(kind,editId){
+  formState={kind:kind,editId:editId||null};
+  document.body.insertAdjacentHTML('beforeend',formOverlayHTML());
+  wireFormEvents();
+  syncFormVisibility();
+}
+function closeForm(){
+  var o=document.getElementById('formOverlay'); if(o) o.remove();
+  formState=null;
+}
+/* A diferencia de un refresh completo, esto NO reconstruye el HTML del formulario:
+   solo muestra/oculta los bloques según las opciones elegidas, para no perder lo
+   que la persona ya escribió en los otros campos. */
+function syncFormVisibility(){
+  var ov=document.getElementById('formOverlay'); if(!ov) return;
+  var freqSel=ov.querySelector('#f_freq'); if(!freqSel) return; // el formulario de suplemento no tiene estos campos
+  var freq=freqSel.value;
+  var hoursWrap=ov.querySelector('#f_hoursWrap');
+  if(hoursWrap) hoursWrap.style.display = freq==='interval'?'':'none';
+
+  var startSel=ov.querySelector('#f_startmode');
+  var startMode=startSel?startSel.value:'fixed';
+  var fixedWrap=ov.querySelector('#f_fixedWrap');
+  var timeWrap=ov.querySelector('#f_timeWrap');
+  var afterWrap=ov.querySelector('#f_afterWrap');
+  if(fixedWrap) fixedWrap.style.display = startMode==='fixed'?'':'none';
+  if(timeWrap) timeWrap.style.display = startMode!=='fixed'?'':'none';
+  if(afterWrap) afterWrap.style.display = startMode==='after'?'':'none';
+
+  var endWrap=ov.querySelector('#f_endmodeWrap');
+  if(endWrap) endWrap.style.display = freq==='daily'?'':'none';
+  var endSel=ov.querySelector('#f_endmode');
+  var endMode = (freq==='daily' && endSel) ? endSel.value : 'count';
+  var countWrap=ov.querySelector('#f_countWrap');
+  var cycleWrap=ov.querySelector('#f_cycleWrap');
+  if(countWrap) countWrap.style.display = endMode==='count'?'':'none';
+  if(cycleWrap) cycleWrap.style.display = endMode==='cycle'?'':'none';
+  var countLabel=ov.querySelector('#f_countLabel');
+  if(countLabel) countLabel.textContent = freq==='weekly'?'Número de semanas':freq==='interval'?'Número de tomas':'Número de días';
+}
+function wireFormEvents(){
+  var ov=document.getElementById('formOverlay'); if(!ov) return;
+  ['#f_freq','#f_startmode','#f_endmode'].forEach(function(sel){
+    var node=ov.querySelector(sel);
+    if(node) node.addEventListener('change',syncFormVisibility);
+  });
+}
+
+function saveSuppFromForm(){
+  var name=(document.getElementById('f_name').value||'').trim();
+  if(!name){ alert('Escribe un nombre.'); return; }
+  var note=(document.getElementById('f_note').value||'').trim();
+  if(formState.editId){
+    var m=getMed(formState.editId);
+    m.name=name; m.note=note;
+  }else{
+    state.meds.push({id:uid(),kind:'supp',name:name,note:note,archived:false});
+  }
+  save(); closeForm(); render();
+}
+function saveMedFromForm(){
+  var name=(document.getElementById('f_name').value||'').trim();
+  if(!name){ alert('Escribe un nombre.'); return; }
+  var dose=(document.getElementById('f_dose').value||'').trim();
+  var note=(document.getElementById('f_note').value||'').trim();
+  var freq=document.getElementById('f_freq').value;
+  var stepHours=stepFromFreq(freq,document.getElementById('f_hours')?document.getElementById('f_hours').value:8);
+  var startMode=document.getElementById('f_startmode').value;
+
+  var fixedStart=null,eventDate=null,startTime=null,afterId=null;
+  if(startMode==='fixed'){
+    fixedStart=document.getElementById('f_fixedstart').value;
+    if(!fixedStart){ alert('Elige la fecha y hora de inicio.'); return; }
+  }else{
+    startTime=document.getElementById('f_starttime').value||'08:00';
+    if(startMode==='after'){
+      afterId=document.getElementById('f_afterid').value;
+      if(!afterId){ alert('Elige después de cuál medicamento empieza, o agrega ese medicamento primero.'); return; }
+    }
+    if(startMode==='event' && formState.editId){
+      var prev=getMed(formState.editId);
+      if(prev && prev.startMode==='event') eventDate=prev.eventDate||null;
+    }
+  }
+
+  var endMode=freq==='daily'? (document.getElementById('f_endmode')?document.getElementById('f_endmode').value:'count') : 'count';
+  var totalDoses=null,cycleLength=null;
+  if(endMode==='count'){
+    totalDoses=+((document.getElementById('f_total')||{}).value||0);
+    if(!totalDoses||totalDoses<1){ alert('Escribe cuántas tomas/días/semanas dura.'); return; }
+  }else if(endMode==='cycle'){
+    cycleLength=+((document.getElementById('f_cycle')||{}).value||28);
+    if(!cycleLength||cycleLength<1) cycleLength=28;
+  }
+
+  if(formState.editId){
+    var m=getMed(formState.editId);
+    Object.assign(m,{name:name,dose:dose,note:note,stepHours:stepHours,startMode:startMode,
+      fixedStart:fixedStart,startTime:startTime,afterId:afterId,endMode:endMode,
+      totalDoses:totalDoses,cycleLength:cycleLength});
+    if(eventDate!==null || startMode!=='event') { /* keep as computed above */ }
+    if(startMode==='event') m.eventDate = (eventDate!==null? eventDate : (m.eventDate||null));
+    else m.eventDate=null;
+  }else{
+    state.meds.push({id:uid(),kind:'med',name:name,dose:dose,note:note,archived:false,
+      stepHours:stepHours,startMode:startMode,fixedStart:fixedStart,eventDate:startMode==='event'?null:null,
+      startTime:startTime,afterId:afterId,endMode:endMode,totalDoses:totalDoses,cycleLength:cycleLength});
+  }
+  save(); closeForm(); render();
+}
+
+/* ================= navegación + eventos ================= */
+var active='hoy';
+function render(){
+  if(active==='hoy') renderHoy();
+  else if(active==='tratamiento') renderTratamiento();
+  else if(active==='alimentacion') renderAlimentacion();
+  else renderAjustes();
+}
+function go(tab){
+  active=tab;
+  var scr=document.querySelectorAll('.screen');
+  for(var i=0;i<scr.length;i++) scr[i].classList.toggle('active',scr[i].id==='tab-'+tab);
+  var btns=document.querySelectorAll('nav.tabbar button');
+  for(var j=0;j<btns.length;j++) btns[j].classList.toggle('on',btns[j].dataset.tab===tab);
+  window.scrollTo(0,0);
+  try{ history.replaceState(null,'','#'+tab); }catch(e){}
+  render();
+}
+document.querySelector('nav.tabbar').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-tab]'); if(b) go(b.dataset.tab);
+});
+
+document.body.addEventListener('click',function(e){
+  var t=e.target;
+  var take=t.closest('[data-take]');
+  if(take){ var a=take.dataset.take.split('|'); toggleMark(a[0],a[1],a[2]); return; }
+  var dm=t.closest('[data-dismiss]');
+  if(dm){ state.dismiss[dm.dataset.dismiss]=true; save(); render(); return; }
+  var meat=t.closest('[data-meat]');
+  if(meat){ redMeat(); state.redMeat.grams=Math.max(0,state.redMeat.grams+(+meat.dataset.meat)); save(); render(); return; }
+
+  var openf=t.closest('[data-openform]');
+  if(openf){ openForm(openf.dataset.openform,null); return; }
+  var editm=t.closest('[data-editmed]');
+  if(editm){ var mm=getMed(editm.dataset.editmed); if(mm) openForm(mm.kind,mm.id); return; }
+  var delm=t.closest('[data-delmed]');
+  if(delm){
+    if(confirm('¿Borrar este elemento? Se perderá su historial de tomas.')){
+      state.meds=state.meds.filter(function(x){return x.id!==delm.dataset.delmed;});
+      save(); render();
+    }
+    return;
+  }
+  var mark=t.closest('[data-markevent]');
+  if(mark){
+    var mmm=getMed(mark.dataset.markevent);
+    if(mmm && confirm('¿Hoy es el primer día? Se activará el recordatorio diario desde hoy.')){
+      mmm.eventDate=ymd(new Date()); save(); render();
+    }
+    return;
+  }
+  var fixe=t.closest('[data-fixevent]');
+  if(fixe){
+    var m4=getMed(fixe.dataset.fixevent);
+    if(m4){
+      var v=prompt('Fecha de inicio (formato AAAA-MM-DD):', m4.eventDate||ymd(new Date()));
+      if(v && /^\d{4}-\d{2}-\d{2}$/.test(v)){ m4.eventDate=v; save(); render(); }
+      else if(v!==null){ alert('Escribe la fecha así: 2026-09-15'); }
+    }
+    return;
+  }
+
+  if(t.closest('[data-closeform]')){ closeForm(); return; }
+  if(t.closest('[data-savesupp]')){ saveSuppFromForm(); return; }
+  if(t.closest('[data-savemed]')){ saveMedFromForm(); return; }
+  if(t.closest('[data-importbtn]')){ var fi=document.getElementById('importFile'); if(fi) fi.click(); return; }
+
+  var rst=t.closest('[data-reset]');
+  if(rst){
+    if(confirm('¿Seguro que quieres borrar todos tus medicamentos y datos guardados? Esto no se puede deshacer.')){
+      state=baseState(); save(); go('hoy');
+    }
+    return;
+  }
+});
+
+document.body.addEventListener('change',function(e){
+  if(e.target.id==='importFile'){
+    var file=e.target.files&&e.target.files[0]; if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var parsed=JSON.parse(reader.result);
+        if(!parsed||typeof parsed!=='object') throw new Error('formato inválido');
+        parsed.meds=Array.isArray(parsed.meds)?parsed.meds:[];
+        parsed.taken=parsed.taken&&typeof parsed.taken==='object'?parsed.taken:{};
+        parsed.dismiss=parsed.dismiss&&typeof parsed.dismiss==='object'?parsed.dismiss:{};
+        state=Object.assign(baseState(),parsed);
+        save(); render();
+        alert('Datos importados correctamente.');
+      }catch(err){ alert('No se pudo leer ese archivo. Revisa que sea un respaldo válido de Raíz.'); }
+      e.target.value='';
+    };
+    reader.readAsText(file);
+  }
+});
+document.querySelector('.app').addEventListener('toggle',function(e){
+  if(e.target.id==='suppBox'){ state.dismiss.suppOpen=e.target.open; save(); }
+},true);
+
+window.__raiz={
+  dosesForDate:dosesForDate, nextDose:nextDose, medStatus:medStatus, rangeOf:rangeOf,
+  buildICS:buildICS, getState:function(){return state;}, setState:function(s){state=s; save();},
+  addMed:function(m){ m.id=m.id||uid(); state.meds.push(m); save(); },
+  render:render
+};
+
+var TABS=['hoy','tratamiento','alimentacion','ajustes'];
+var fromHash=(location.hash||'').replace('#','');
+if(TABS.indexOf(fromHash)>=0){ active=fromHash;
+  var scr0=document.querySelectorAll('.screen');
+  for(var q=0;q<scr0.length;q++) scr0[q].classList.toggle('active',scr0[q].id==='tab-'+active);
+  var bt0=document.querySelectorAll('nav.tabbar button');
+  for(var w=0;w<bt0.length;w++) bt0[w].classList.toggle('on',bt0[w].dataset.tab===active);
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+
+render();
+updateCountdown();
+setInterval(updateCountdown,1000);
+setInterval(function(){ if(active==='hoy') renderHoy(); },60000);
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
+})();
+</script>
+</body>
+</html>
